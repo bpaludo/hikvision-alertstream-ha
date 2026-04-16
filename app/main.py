@@ -34,7 +34,8 @@ MQTT_TOPIC_BASE        = os.environ.get("MQTT_TOPIC_BASE", "hikvision/outdoor/ev
 MQTT_QOS               = int(os.environ.get("MQTT_QOS", 1))
 MQTT_RETAIN_ANY        = os.environ.get("MQTT_RETAIN_ANY", "false").lower() == "true"
 HEARTBEAT_LOG_INTERVAL = int(os.environ.get("HEARTBEAT_LOG_INTERVAL", 10))
-RECONNECT_DELAY        = int(os.environ.get("RECONNECT_DELAY", 5))
+RECONNECT_DELAY        = int(os.environ.get("RECONNECT_DELAY", 60))
+MQTT_CLIENT_ID         = os.environ.get("MQTT_CLIENT_ID", f"hikvision-alertstream-{HIK_HOST}")
 
 ALERT_STREAM_URL = f"https://{HIK_HOST}/ISAPI/Event/notification/alertStream"
 
@@ -42,24 +43,24 @@ _mqtt_client = None
 _mqtt_connected = threading.Event()
 
 
-def _on_connect(client, userdata, flags, rc, properties=None):
-    if rc == 0:
+def _on_connect(client, userdata, connect_flags, reason_code, properties=None):
+    if reason_code == 0:
         log.info("MQTT conectado a %s:%s", MQTT_HOST, MQTT_PORT)
         _mqtt_connected.set()
     else:
-        log.error("MQTT falhou ao conectar, rc=%s", rc)
+        log.error("MQTT falhou ao conectar, reason_code=%s", reason_code)
         _mqtt_connected.clear()
 
 
-def _on_disconnect(client, userdata, rc, properties=None, reasoncode=None):
-    log.warning("MQTT desconectado (rc=%s) — reconectando...", rc)
+def _on_disconnect(client, userdata, disconnect_flags, reason_code, properties=None):
+    log.warning("MQTT desconectado (reason_code=%s) — reconectando...", reason_code)
     _mqtt_connected.clear()
 
 
 def build_mqtt_client():
     client = mqtt.Client(
         mqtt.CallbackAPIVersion.VERSION2,
-        client_id="hikvision-alertstream",
+        client_id=MQTT_CLIENT_ID,
         clean_session=True,
     )
     client.username_pw_set(MQTT_USER, MQTT_PASS)
@@ -98,8 +99,11 @@ def stream_parts(response):
             if line.endswith(b"\r\n"):
                 return line
 
+    pending_line = None
+
     while True:
-        line = read_line()
+        line = pending_line or read_line()
+        pending_line = None
         if line is None:
             log.info("Stream encerrado pelo dispositivo.")
             return
@@ -155,6 +159,7 @@ def stream_parts(response):
                 if bline is None:
                     break
                 if bline.strip() == boundary or bline.strip() == boundary + b"--":
+                    pending_line = bline
                     break
                 body_bytes += bline
 
