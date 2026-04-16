@@ -1,0 +1,14 @@
+services:
+  hikvision-alertstream:
+    build: .
+    container_name: hikvision-alertstream
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./app:/app
+    network_mode: host          # acesso direto à LAN — simplifica roteamento
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
