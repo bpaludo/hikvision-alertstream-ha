@@ -48,7 +48,11 @@ enabling:
   combined with the [pergolafabio/Hikvision-Addons](https://github.com/pergolafabio/Hikvision-Addons)
   addon on an indoor station (KH series) for reliable ring detection
 - 🔓 **Remote door control** — open, close or lock the door from Home Assistant
-  via REST commands directly on the device ISAPI, no bridge required
+  via REST commands directly on the device ISAPI HTTP endpoint. This works
+  independently of this bridge — the pergolafabio addon can open doors via SDK
+  for supported devices (KV/KD series), but since the K1T344 is not supported
+  by that addon, the direct ISAPI REST approach is the way to go. See the
+  Home Assistant integration section below for the full configuration.
 - 📋 **Device monitoring** — firmware version, serial number and MAC address
   as Home Assistant sensors
 - 🔁 **Reliable reconnection** — automatically reconnects if the stream drops,
