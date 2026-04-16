@@ -8,7 +8,7 @@ ISAPI alertStream endpoint.
 
 This project was created by **Bruno Paludo** ([@bpaludo](https://github.com/bpaludo)),
 a home automation enthusiast and **not a professional developer**.
-The code works well for the confirmed devices listed above, but there is
+The code may work well for the devices listed above, but there is
 plenty of room for improvement.
 
 **Contributors are more than welcome.** If you want to improve the code,
