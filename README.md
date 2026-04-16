@@ -49,14 +49,15 @@ enabling:
 - 🔔 **Doorbell detection** — trigger automations when the button is pressed,
   combined with the [pergolafabio/Hikvision-Addons](https://github.com/pergolafabio/Hikvision-Addons)
   addon on an indoor station (KH series) for reliable ring detection
-- 🔓 **Remote door control** — open, close or lock the door from Home Assistant
-  via REST commands directly on the device ISAPI HTTP endpoint. This works
-  independently of this bridge — the pergolafabio addon can open doors via SDK
-  for supported devices (KV/KD series), but since the K1T344 is not supported
-  by that addon, the direct ISAPI REST approach is the way to go. See the
-  Home Assistant integration section below for the full configuration.
-- 📋 **Device monitoring** — firmware version, serial number and MAC address
-  as Home Assistant sensors
+- 🔓 **Remote door control** — the README includes optional Home Assistant
+  `rest_command` examples for door control via ISAPI HTTP endpoint. This is
+  not performed by the bridge container itself — it works independently of
+  this bridge. The pergolafabio addon can open doors via SDK for supported
+  devices (KV/KD series), but since the K1T344 is not supported by that addon,
+  the direct ISAPI REST approach is the way to go.
+- 📋 **Device monitoring** — the README includes optional Home Assistant REST
+  sensor examples for firmware version, serial number and MAC address. This
+  data is not collected by the bridge container itself.
 - 🔁 **Reliable reconnection** — automatically reconnects if the stream drops,
   with no manual intervention needed
 
@@ -77,7 +78,7 @@ Feedback welcome.
 
 - Docker and Docker Compose
 - An MQTT broker (EMQX, Mosquitto, etc.)
-- Home Assistant (any installation type)
+- Home Assistant plus a host capable of running Docker / Docker Compose
 
 ## Quick start
 
@@ -274,7 +275,7 @@ hik_outdoor_pass: YOUR_PASSWORD
 
 ```yaml
 rest:
-  - resource: "https://YOUR_DEVICE_IP/ISAPI/System/deviceInfo"
+  - resource: "https://YOUR_DEVICE_IP/ISAPI/System/deviceInfo?format=json"
     username: !secret hik_outdoor_user
     password: !secret hik_outdoor_pass
     authentication: digest
@@ -297,6 +298,9 @@ rest:
         unique_id: outdoor_mac
         value_template: "{{ value_json.DeviceInfo.macAddress }}"
 ```
+> **Note:** some Hikvision firmware returns XML by default on `/ISAPI/System/deviceInfo`.
+> If `?format=json` is unsupported on your device, the templates above will not work as-is.
+> This has been tested and confirmed working on DS-K1T344MBWX firmware V4.13.0.
 
 ### 3. Automation example (doorbell notification with door action)
 
@@ -369,14 +373,31 @@ hikvision-alertstream (Docker)
         ▼
 EMQX / Mosquitto broker
         │
-        │  MQTT discovery
+        │  MQTT event topics
         ▼
 Home Assistant
 ```
 
 ## Configuration reference
 
-See `.env.example` for all available options with descriptions.
+See `.env.example` for the available keys. Comments/descriptions are minimal —
+refer to the table below for details.
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `HIK_HOST` | ✅ | — | IP address of your Hikvision device |
+| `HIK_USER` | ✅ | — | Device username (usually `admin`) |
+| `HIK_PASS` | ✅ | — | Device password |
+| `MQTT_HOST` | ✅ | — | IP address of your MQTT broker |
+| `MQTT_PORT` | ❌ | `1883` | MQTT broker port |
+| `MQTT_USER` | ✅ | — | MQTT username |
+| `MQTT_PASS` | ✅ | — | MQTT password |
+| `MQTT_TLS` | ❌ | `false` | Enable TLS for MQTT connection |
+| `MQTT_TOPIC_BASE` | ❌ | `hikvision/outdoor/event` | Base topic for all events |
+| `MQTT_QOS` | ❌ | `1` | MQTT QoS level (0 or 1) |
+| `MQTT_RETAIN_ANY` | ❌ | `false` | Retain last event on `/any` topic |
+| `HEARTBEAT_LOG_INTERVAL` | ❌ | `10` | Log heartbeat every N received (0 = log all) |
+| `RECONNECT_DELAY` | ❌ | `60` | Seconds to wait before reconnecting after failure |
 
 ## License
 
