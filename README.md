@@ -43,7 +43,9 @@ in real time. This bridge connects to that stream and publishes events to MQTT,
 enabling:
 
 - 👤 **Face recognition events** — know exactly who is at the door based on
-  enrolled users, not just that someone pressed a button
+  enrolled users. The event payload includes the person's name and employee ID,
+  enabling automations like "if John opens the door, turn on the hallway light"
+  or "if an unknown face is detected, send an alert"
 - 🔔 **Doorbell detection** — trigger automations when the button is pressed,
   combined with the [pergolafabio/Hikvision-Addons](https://github.com/pergolafabio/Hikvision-Addons)
   addon on an indoor station (KH series) for reliable ring detection
@@ -142,10 +144,10 @@ The base topic is configurable via `MQTT_TOPIC_BASE` in `.env`.
 | 1 | 0 | Door opened |
 | 1 | 2 | Door locked |
 
-The full payload is the raw JSON from the device, published as-is.
-Face recognition events include `name` and `employeeNoString` fields.
+### Face recognition payload — identifying who is at the door
 
-### Example payload (face recognition)
+When a recognized face triggers the door, the event payload includes the
+person's name and employee ID as configured in the device:
 
 ```json
 {
@@ -159,6 +161,50 @@ Face recognition events include `name` and `employeeNoString` fields.
   }
 }
 ```
+
+This enables powerful automations based on who specifically is at the door:
+
+```yaml
+# Example: different action depending on who opened the door
+alias: "Door - Person-specific automation"
+trigger:
+  - platform: mqtt
+    topic: "hikvision/outdoor/event/5/75"
+action:
+  - choose:
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ trigger.payload_json.AccessControllerEvent.name == 'John Doe' }}
+        sequence:
+          - service: light.turn_on
+            target:
+              entity_id: light.hallway
+      - conditions:
+          - condition: template
+            value_template: >
+              {{ trigger.payload_json.AccessControllerEvent.employeeNoString == '12345' }}
+        sequence:
+          - service: notify.mobile_app_your_phone
+            data:
+              message: "John arrived home"
+```
+
+### Other potentially useful endpoints
+
+The following endpoints are available on Hikvision access control terminals
+based on the official ISAPI documentation, but have **not been tested** on the
+DS-K1T344MBWX specifically. Use with caution and please open an issue to
+report whether they work on your device.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/ISAPI/Streaming/channels/1/picture` | GET | Capture a snapshot from the camera |
+| `/ISAPI/AccessControl/capabilities` | GET | Get device capabilities |
+| `/ISAPI/AccessControl/UserInfo/Search?format=json` | POST | Search enrolled users |
+| `/ISAPI/AccessControl/CardInfo/Search?format=json` | POST | Search enrolled cards |
+
+> Contributions confirming or correcting these endpoints are welcome.
 
 ## Home Assistant integration
 
