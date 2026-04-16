@@ -21,19 +21,43 @@ your device model and firmware version so we can document it.
 
 ## Why this exists
 
-Hikvision's video intercom addon for Home Assistant
-([pergolafabio/Hikvision-Addons](https://github.com/pergolafabio/Hikvision-Addons))
-works great for video doorbell devices (KV/KD series). However, access
-control terminals like the **DS-K1T344MBWX** are a different product line —
-they don't speak the intercom SDK protocol. Their only external event
-interface is the ISAPI alertStream, an HTTP multipart stream that delivers
-access control events, face recognition results, door status changes, and more.
+Most people integrating a video doorbell with Home Assistant want three things:
 
-This bridge:
-- Connects to the alertStream endpoint on the device
-- Parses the multipart stream, skipping binary JPEG parts
-- Publishes JSON events to MQTT topics
-- Reconnects automatically on failure
+1. **Know when someone rings the doorbell** — get a notification on their phone
+2. **Open the door remotely** — directly from the phone or a dashboard
+3. **Two-way audio** — talk to the visitor without leaving the app
+
+If you have a Hikvision video doorbell (KV/KD series), the
+[pergolafabio/Hikvision-Addons](https://github.com/pergolafabio/Hikvision-Addons)
+addon covers all three of these. Start there.
+
+This bridge exists for a different scenario: **Hikvision access control
+terminals** like the DS-K1T344MBWX. These devices are not video doorbells —
+they are access control terminals with a camera, face recognition, and QR code
+reader. They do not speak the intercom SDK protocol that the pergolafabio addon
+relies on, so that addon cannot connect to them at all.
+
+For these devices, the only external event interface is the ISAPI alertStream —
+an HTTP multipart stream that delivers access control and face recognition events
+in real time. This bridge connects to that stream and publishes events to MQTT,
+enabling:
+
+- 👤 **Face recognition events** — know exactly who is at the door based on
+  enrolled users, not just that someone pressed a button
+- 🔔 **Doorbell detection** — trigger automations when the button is pressed,
+  combined with the [pergolafabio/Hikvision-Addons](https://github.com/pergolafabio/Hikvision-Addons)
+  addon on an indoor station (KH series) for reliable ring detection
+- 🔓 **Remote door control** — open, close or lock the door from Home Assistant
+  via REST commands directly on the device ISAPI, no bridge required
+- 📋 **Device monitoring** — firmware version, serial number and MAC address
+  as Home Assistant sensors
+- 🔁 **Reliable reconnection** — automatically reconnects if the stream drops,
+  with no manual intervention needed
+
+> **Two-way audio** is not handled by this bridge. If you have a Hikvision
+> indoor station (KH series), the
+> [pergolafabio/Hikvision-Addons](https://github.com/pergolafabio/Hikvision-Addons)
+> addon handles two-way audio via go2rtc. See that project for details.
 
 ## Confirmed compatible devices
 
